@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinterest Video Downloader</title>
+    <style>
+        :root { --primary-color: #e60023; --bg-color: #f8f9fa; --text-color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 500px; }
+        h1 { color: var(--primary-color); margin-bottom: 1.5rem; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 1rem; }
+        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 10px; outline: none; font-size: 1rem; transition: border-color 0.3s; }
+        input:focus { border-color: var(--primary-color); }
+        button { background-color: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: transform 0.2s, background-color 0.3s; }
+        button:hover { background-color: #c4001d; transform: scale(1.05); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #status { margin-top: 1rem; font-size: 0.9rem; color: #666; }
+        .loader { display: none; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 10px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📌 Pinterest Downloader</h1>
+        <div class="input-group">
+            <input type="text" id="urlInput" placeholder="Paste Pinterest link here...">
+            <button id="downloadBtn">Download</button>
+        </div>
+        <div class="loader" id="loader"></div>
+        <div id="status">Ready to download!</div>
+    </div>
+    <script>
+        const btn = document.getElementById('downloadBtn');
+        const input = document.getElementById('urlInput');
+        const status = document.getElementById('status');
+        const loader = document.getElementById('loader');
+        const API_URL = "https://your-render-api-url.onrender.com/download";
+        btn.onclick = async () => {
+            const url = input.value.trim();
+            if (!url) { status.innerText = "Please paste a link first!"; return; }
+            btn.disabled = true;
+            loader.style.display = "block";
+            status.innerText = "Processing video... please wait...";
+            try {
+                window.location.href = `${API_URL}?url=${encodeURIComponent(url)}`;
+                setTimeout(() => {
+                    status.innerText = "Download started! Check your downloads folder.";
+                    btn.disabled = false;
+                    loader.style.display = "none";
+                }, 5000);
+            } catch (e) {
+                status.innerText = "Error: " + e.message;
+                btn.disabled = false;
+                loader.style.display = "none";
+            }
+        };
+    </script>
+</body>
+</html>

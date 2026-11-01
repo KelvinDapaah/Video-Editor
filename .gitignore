@@ -1,0 +1,8 @@
+# Ignore large binaries and local environment folders
+venv/
+__pycache__/
+bin/
+downloads/
+*.zip
+*.mp4
+.DS_Store
