@@ -3,58 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pinterest Video Downloader</title>
+    <title>Universal Video Editor</title>
     <style>
-        :root { --primary-color: #e60023; --bg-color: #f8f9fa; --text-color: #333; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 500px; }
-        h1 { color: var(--primary-color); margin-bottom: 1.5rem; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 1rem; }
-        input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 10px; outline: none; font-size: 1rem; transition: border-color 0.3s; }
-        input:focus { border-color: var(--primary-color); }
-        button { background-color: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: transform 0.2s, background-color 0.3s; }
-        button:hover { background-color: #c4001d; transform: scale(1.05); }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        #status { margin-top: 1rem; font-size: 0.9rem; color: #666; }
+        :root { --primary-color: #e60023; --bg-color: #f8f9fa; --text-color: #333; --muted-color: #666; --border-color: #ddd; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 2rem 0; }
+        .container { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 700px; }
+        h1 { color: var(--primary-color); margin: 0 0 .5rem; text-align: center; }
+        .intro { color: var(--muted-color); text-align: center; margin: 0 0 1.5rem; }
+        .section { border-top: 1px solid #eee; padding-top: 1.25rem; margin-top: 1.25rem; }
+        .input-group, .control-row, .action-row { display: flex; gap: 10px; align-items: center; }
+        .input-group { margin-bottom: 1rem; }
+        .control-row { flex-wrap: wrap; margin-bottom: 1rem; }
+        .control-row label { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 130px; text-align: left; font-size: .85rem; color: var(--muted-color); }
+        input, select { width: 100%; padding: 11px; border: 2px solid var(--border-color); border-radius: 10px; outline: none; font-size: .95rem; background: white; }
+        input:focus, select:focus { border-color: var(--primary-color); }
+        button { background-color: var(--primary-color); color: white; border: none; padding: 12px 18px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: .95rem; transition: transform .2s, background-color .3s; white-space: nowrap; }
+        button:hover { background-color: #c4001d; transform: scale(1.02); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; transform: none; }
+        button.secondary { background: #f0f0f0; color: var(--text-color); }
+        button.secondary:hover { background: #e2e2e2; }
+        .segment { border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; margin-bottom: .75rem; text-align: left; }
+        .segment-header { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: .75rem; }
+        .segment-title { font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .segment-number { color: var(--primary-color); margin-right: .4rem; }
+        .remove-button { background: transparent; color: var(--primary-color); padding: 4px 8px; }
+        .remove-button:hover { background: #fff0f2; transform: none; }
+        .empty-state { color: var(--muted-color); padding: 1rem; border: 1px dashed var(--border-color); border-radius: 10px; }
+        .action-row { justify-content: center; flex-wrap: wrap; }
+        #status { margin-top: 1rem; font-size: .9rem; color: var(--muted-color); text-align: center; min-height: 1.2em; }
         .loader { display: none; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 10px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media (max-width: 560px) { .input-group { flex-direction: column; align-items: stretch; } .container { padding: 1.25rem; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📌 Pinterest Downloader</h1>
-        <div class="input-group">
-            <input type="text" id="urlInput" placeholder="Paste Pinterest link here...">
-            <button id="downloadBtn">Download</button>
-        </div>
+    <main class="container">
+        <h1>🎬 Universal Video Editor</h1>
+        <p class="intro">Combine audio, video, cuts, and overlays from different links into one file.</p>
+
+        <section>
+            <div class="input-group">
+                <input type="url" id="urlInput" placeholder="Paste an audio or video link..." autocomplete="off">
+                <button id="addSegmentBtn" type="button">Add to editor</button>
+            </div>
+            <div class="control-row">
+                <label>Link type
+                    <select id="mediaType">
+                        <option value="audio">Audio only</option>
+                        <option value="video">Video only</option>
+                        <option value="audio-video">Audio + video</option>
+                    </select>
+                </label>
+                <label>Start time (seconds)
+                    <input id="startTime" type="number" min="0" step="0.1" value="0">
+                </label>
+                <label>Duration (seconds)
+                    <input id="duration" type="number" min="0.1" step="0.1" placeholder="Until end">
+                </label>
+                <label>Track
+                    <select id="track">
+                        <option value="main">Main timeline</option>
+                        <option value="overlay">Overlay</option>
+                    </select>
+                </label>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Timeline</h2>
+            <div id="segments" class="empty-state">No links added yet. Add a link above to start building your edit.</div>
+        </section>
+
+        <section class="section">
+            <div class="control-row">
+                <label>Unified output format
+                    <select id="outputFormat">
+                        <option value="mp4">MP4</option>
+                        <option value="webm">WebM</option>
+                        <option value="mp3">MP3 audio</option>
+                    </select>
+                </label>
+            </div>
+            <div class="action-row">
+                <button id="composeBtn" type="button" disabled>Create unified file</button>
+                <button id="directDownloadBtn" type="button" class="secondary">Download original link</button>
+            </div>
+        </section>
+
         <div class="loader" id="loader"></div>
-        <div id="status">Ready to download!</div>
-    </div>
+        <div id="status" role="status">Ready to edit.</div>
+    </main>
+
     <script>
-        const btn = document.getElementById('downloadBtn');
-        const input = document.getElementById('urlInput');
-        const status = document.getElementById('status');
-        const loader = document.getElementById('loader');
-        const API_URL = "https://video-editor-fcez.onrender.com/download";
-        btn.onclick = async () => {
-            const url = input.value.trim();
-            if (!url) { status.innerText = "Please paste a link first!"; return; }
-            btn.disabled = true;
-            loader.style.display = "block";
-            status.innerText = "Processing video... please wait...";
-            try {
-                window.location.href = `${API_URL}?url=${encodeURIComponent(url)}`;
-                setTimeout(() => {
-                    status.innerText = "Download started! Check your downloads folder.";
-                    btn.disabled = false;
-                    loader.style.display = "none";
-                }, 5000);
-            } catch (e) {
-                status.innerText = "Error: " + e.message;
-                btn.disabled = false;
-                loader.style.display = "none";
-            }
+        const API_URL = "https://video-editor-fcez.onrender.com";
+        const state = { segments: [] };
+        const elements = {
+            url: document.getElementById("urlInput"),
+            mediaType: document.getElementById("mediaType"),
+            startTime: document.getElementById("startTime"),
+            duration: document.getElementById("duration"),
+            track: document.getElementById("track"),
+            outputFormat: document.getElementById("outputFormat"),
+            segments: document.getElementById("segments"),
+            add: document.getElementById("addSegmentBtn"),
+            compose: document.getElementById("composeBtn"),
+            directDownload: document.getElementById("directDownloadBtn"),
+            loader: document.getElementById("loader"),
+            status: document.getElementById("status")
         };
+
+        function setBusy(isBusy) {
+            elements.loader.style.display = isBusy ? "block" : "none";
+            elements.add.disabled = isBusy;
+            elements.compose.disabled = isBusy || state.segments.length === 0;
+            elements.directDownload.disabled = isBusy;
+        }
+
+        function setStatus(message, isError = false) {
+            elements.status.textContent = message;
+            elements.status.style.color = isError ? "#b00020" : "var(--muted-color)";
+        }
+
+        function addSegment() {
+            const url = elements.url.value.trim();
+            const start = Number(elements.startTime.value);
+            const duration = elements.duration.value.trim() ? Number(elements.duration.value) : null;
+
+            if (!url) { setStatus("Please paste a link first.", true); return; }
+            try { new URL(url); } catch { setStatus("Please enter a valid link.", true); return; }
+            if (!Number.isFinite(start) || start < 0 || (duration !== null && (!Number.isFinite(duration) || duration <= 0))) {
+                setStatus("Start time and duration must be valid positive numbers.", true);
+                return;
+            }
+
+            state.segments.push({
+                url,
+                media_type: elements.mediaType.value,
+                start,
+                duration,
+                track: elements.track.value
+            });
+            elements.url.value = "";
+            elements.startTime.value = "0";
+            elements.duration.value = "";
+            renderSegments();
+            setStatus("Link added to the timeline.");
+        }
+
+        function renderSegments() {
+            elements.segments.replaceChildren();
+            elements.compose.disabled = state.segments.length === 0;
+            if (state.segments.length === 0) {
+                elements.segments.className = "empty-state";
+                elements.segments.textContent = "No links added yet. Add a link above to start building your edit.";
+                return;
+            }
+            elements.segments.className = "";
+            state.segments.forEach((segment, index) => {
+                const item = document.createElement("article");
+                item.className = "segment";
+                const header = document.createElement("div");
+                header.className = "segment-header";
+                const title = document.createElement("div");
+                title.className = "segment-title";
+                const number = document.createElement("span");
+                number.className = "segment-number";
+                number.textContent = `${index + 1}.`;
+                title.append(number, document.createTextNode(segment.url));
+                const remove = document.createElement("button");
+                remove.type = "button";
+                remove.className = "remove-button";
+                remove.textContent = "Remove";
+                remove.addEventListener("click", () => {
+                    state.segments.splice(index, 1);
+                    renderSegments();
+                    setStatus("Timeline updated.");
+                });
+                header.append(title, remove);
+                const details = document.createElement("div");
+                details.textContent = `${segment.media_type === "audio-video" ? "Audio + video" : segment.media_type} · ${segment.track} · from ${segment.start}s${segment.duration === null ? " to end" : ` for ${segment.duration}s`}`;
+                item.append(header, details);
+                elements.segments.append(item);
+            });
+        }
+
+        async function directDownload() {
+            const url = elements.url.value.trim();
+            if (!url) { setStatus("Paste a link to download it directly.", true); return; }
+            try { new URL(url); } catch { setStatus("Please enter a valid link.", true); return; }
+            setBusy(true);
+            setStatus("Preparing direct download...");
+            window.location.href = `${API_URL}/download?url=${encodeURIComponent(url)}`;
+            window.setTimeout(() => { setBusy(false); setStatus("Download started. Check your downloads folder."); }, 2500);
+        }
+
+        async function compose() {
+            setBusy(true);
+            setStatus("Building your unified file...");
+            try {
+                const response = await fetch(`${API_URL}/compose`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ segments: state.segments, output_format: elements.outputFormat.value })
+                });
+                if (!response.ok) {
+                    let message = `Composition failed (${response.status}).`;
+                    try { const error = await response.json(); message = error.detail || message; } catch {}
+                    throw new Error(message);
+                }
+                const contentType = response.headers.get("content-type") || "";
+                if (contentType.includes("application/json")) {
+                    const result = await response.json();
+                    if (!result.url) throw new Error("The server did not return a download URL.");
+                    window.location.href = result.url;
+                } else {
+                    const blob = await response.blob();
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `edited-video.${elements.outputFormat.value}`;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                }
+                setStatus("Your unified file is ready.");
+            } catch (error) {
+                setStatus(error.message || "Unable to create the unified file.", true);
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        elements.add.addEventListener("click", addSegment);
+        elements.url.addEventListener("keydown", event => { if (event.key === "Enter") addSegment(); });
+        elements.directDownload.addEventListener("click", directDownload);
+        elements.compose.addEventListener("click", compose);
     </script>
 </body>
 </html>
