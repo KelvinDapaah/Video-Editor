@@ -12,13 +12,12 @@ WORKDIR /app
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install fastapi uvicorn
 
 # Copy the application code
 COPY . .
 
-# Expose the port Render expects
-EXPOSE 8000
+# Render supplies PORT for web services. Keep 8000 as the local fallback.
+EXPOSE 10000
 
 # Run the application with uvicorn
-CMD ["uvicorn", "main_api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn main_api:app --host 0.0.0.0 --port ${PORT:-8000}"]
