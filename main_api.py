@@ -140,11 +140,25 @@ def compose_media(request: ComposeRequest, work_dir: Path) -> Path:
 
     filter_parts: list[str] = []
     concat_inputs: list[str] = []
-    audio_inputs: list[str] = []
+    overlay_audio_inputs: list[str] = []
+    video_output = request.output_format != "mp3"
 
     for main_position, (input_index, segment, path) in enumerate(main_segments):
         duration = main_durations[main_position]
         trim_end = f":duration={duration}"
+        if not video_output:
+            if segment.media_type in ("audio", "audio-video"):
+                filter_parts.append(
+                    f"[{input_index}:a]atrim=start={segment.start}{trim_end},"
+                    f"asetpts=PTS-STARTPTS[a{main_position}]"
+                )
+            else:
+                filter_parts.append(
+                    f"anullsrc=channel_layout=stereo:sample_rate=48000:d={duration},"
+                    f"asetpts=PTS-STARTPTS[a{main_position}]"
+                )
+            concat_inputs.append(f"[a{main_position}]")
+            continue
         if segment.media_type == "audio":
             filter_parts.append(
                 f"color=c=black:s=1280x720:r=30:d={duration},setpts=PTS-STARTPTS[v{main_position}]"
@@ -168,12 +182,19 @@ def compose_media(request: ComposeRequest, work_dir: Path) -> Path:
                     f"[{input_index}:a]atrim=start={segment.start}{trim_end},asetpts=PTS-STARTPTS[a{main_position}]"
                 )
         concat_inputs.append(f"[v{main_position}][a{main_position}]")
-        audio_inputs.append(f"[a{main_position}]")
 
-    filter_parts.append(
-        "".join(concat_inputs) + f"concat=n={len(main_segments)}:v=1:a=1[basev][basea]"
-    )
-    final_video = "[basev]"
+    if video_output:
+        filter_parts.append(
+            "".join(concat_inputs) + f"concat=n={len(main_segments)}:v=1:a=1[basev][basea]"
+        )
+        final_video = "[basev]"
+        final_audio = "[basea]"
+    else:
+        filter_parts.append(
+            "".join(concat_inputs) + f"concat=n={len(main_segments)}:v=0:a=1[basea]"
+        )
+        final_audio = "[basea]"
+
     for input_index, segment, path in downloaded:
         if segment.track != "overlay":
             continue
@@ -182,14 +203,14 @@ def compose_media(request: ComposeRequest, work_dir: Path) -> Path:
             raise RuntimeError("An overlay starts after the end of its downloaded media.")
         trim_end = f":duration={duration}"
         timeline_start = segment.timeline_start
-        if segment.media_type == "audio":
+        if segment.media_type == "audio" or (segment.media_type == "audio-video" and not video_output):
             delay = int(timeline_start * 1000)
             filter_parts.append(
                 f"[{input_index}:a]atrim=start={segment.start}{trim_end},"
                 f"asetpts=PTS-STARTPTS,adelay={delay}|{delay}[oa{input_index}]"
             )
-            audio_inputs.append(f"[oa{input_index}]")
-        else:
+            overlay_audio_inputs.append(f"[oa{input_index}]")
+        elif video_output:
             filter_parts.append(
                 f"[{input_index}:v]trim=start={segment.start}{trim_end},"
                 f"scale=1280:720:force_original_aspect_ratio=decrease,"
@@ -205,15 +226,14 @@ def compose_media(request: ComposeRequest, work_dir: Path) -> Path:
                     f"[{input_index}:a]atrim=start={segment.start}{trim_end},"
                     f"asetpts=PTS-STARTPTS,adelay={delay}|{delay}[oa{input_index}]"
                 )
-                audio_inputs.append(f"[oa{input_index}]")
+                overlay_audio_inputs.append(f"[oa{input_index}]")
 
-    if len(audio_inputs) > 1:
+    if overlay_audio_inputs:
+        audio_inputs = ["[basea]", *overlay_audio_inputs]
         filter_parts.append(
             "".join(audio_inputs) + f"amix=inputs={len(audio_inputs)}:duration=longest:dropout_transition=2[aout]"
         )
         final_audio = "[aout]"
-    else:
-        final_audio = "[basea]"
 
     output = work_dir / f"edited.{request.output_format}"
     filters = ";".join(filter_parts)
