@@ -67,6 +67,9 @@
                         <option value="overlay">Overlay</option>
                     </select>
                 </label>
+                <label>Place at (seconds)
+                    <input id="timelineStart" type="number" min="0" step="0.1" value="0">
+                </label>
             </div>
         </section>
 
@@ -104,6 +107,7 @@
             startTime: document.getElementById("startTime"),
             duration: document.getElementById("duration"),
             track: document.getElementById("track"),
+            timelineStart: document.getElementById("timelineStart"),
             outputFormat: document.getElementById("outputFormat"),
             segments: document.getElementById("segments"),
             add: document.getElementById("addSegmentBtn"),
@@ -129,11 +133,13 @@
             const url = elements.url.value.trim();
             const start = Number(elements.startTime.value);
             const duration = elements.duration.value.trim() ? Number(elements.duration.value) : null;
+            const timelineStart = Number(elements.timelineStart.value);
 
             if (!url) { setStatus("Please paste a link first.", true); return; }
             try { new URL(url); } catch { setStatus("Please enter a valid link.", true); return; }
-            if (!Number.isFinite(start) || start < 0 || (duration !== null && (!Number.isFinite(duration) || duration <= 0))) {
-                setStatus("Start time and duration must be valid positive numbers.", true);
+            if (!Number.isFinite(start) || start < 0 || !Number.isFinite(timelineStart) || timelineStart < 0 ||
+                (duration !== null && (!Number.isFinite(duration) || duration <= 0))) {
+                setStatus("Start time, placement, and duration must be valid positive numbers.", true);
                 return;
             }
 
@@ -142,11 +148,13 @@
                 media_type: elements.mediaType.value,
                 start,
                 duration,
-                track: elements.track.value
+                track: elements.track.value,
+                timeline_start: Number(elements.timelineStart.value)
             });
             elements.url.value = "";
             elements.startTime.value = "0";
             elements.duration.value = "";
+            elements.timelineStart.value = "0";
             renderSegments();
             setStatus("Link added to the timeline.");
         }
@@ -182,7 +190,7 @@
                 });
                 header.append(title, remove);
                 const details = document.createElement("div");
-                details.textContent = `${segment.media_type === "audio-video" ? "Audio + video" : segment.media_type} · ${segment.track} · from ${segment.start}s${segment.duration === null ? " to end" : ` for ${segment.duration}s`}`;
+                details.textContent = `${segment.media_type === "audio-video" ? "Audio + video" : segment.media_type} · ${segment.track} · source from ${segment.start}s${segment.duration === null ? " to end" : ` for ${segment.duration}s`}${segment.track === "overlay" ? ` · placed at ${segment.timeline_start}s` : ""}`;
                 item.append(header, details);
                 elements.segments.append(item);
             });
