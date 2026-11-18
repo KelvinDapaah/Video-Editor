@@ -64,7 +64,18 @@ def download_media(segment: Segment, directory: Path, index: int) -> Path:
     else:
         media_format = "bv*+ba/b"
 
-    player_clients = ["default", "ios", "android", "mweb", "web_embedded", "tv"]
+    player_clients = [
+        "default",
+        "tv_samsung",
+        "tv",
+        "ios",
+        "android",
+        "android_vr",
+        "visionos",
+        "mweb",
+        "web_embedded",
+        "web_safari",
+    ]
     cookie_file = os.getenv("YOUTUBE_COOKIE_FILE")
     cookie_data = os.getenv("YOUTUBE_COOKIES")
     options = {
