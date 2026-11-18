@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import uuid
 import os
+from urllib.parse import urlparse
 
 import yt_dlp
 from fastapi import BackgroundTasks, FastAPI, HTTPException
@@ -54,30 +55,21 @@ def find_downloaded_file(directory: Path, prefix: str) -> Path:
     return files[0]
 
 
+def is_youtube_url(url: str) -> bool:
+    hostname = (urlparse(url).hostname or "").lower()
+    return hostname == "youtu.be" or hostname.endswith(".youtube.com")
+
+
 def download_media(segment: Segment, directory: Path, index: int) -> Path:
     prefix = f"segment_{index}"
     template = str(directory / f"{prefix}.%(ext)s")
     if segment.media_type == "audio":
         media_format = "bestaudio/best"
     elif segment.media_type == "video":
-        media_format = "bv*[ext=mp4]/bv*/b"
+        media_format = "bestvideo/best"
     else:
-        media_format = "bv*+ba/b"
+        media_format = "bestvideo+bestaudio/best"
 
-    player_clients = [
-        "default",
-        "tv_samsung",
-        "tv",
-        "ios",
-        "android",
-        "android_vr",
-        "visionos",
-        "mweb",
-        "web_embedded",
-        "web_safari",
-    ]
-    cookie_file = os.getenv("YOUTUBE_COOKIE_FILE")
-    cookie_data = os.getenv("YOUTUBE_COOKIES")
     options = {
         "format": media_format,
         "outtmpl": template,
@@ -88,26 +80,29 @@ def download_media(segment: Segment, directory: Path, index: int) -> Path:
         "retries": 3,
         "fragment_retries": 3,
         "socket_timeout": 30,
-        "js_runtimes": {"node": {}},
-        "remote_components": {"ejs:github", "ejs:npm"},
-        "extractor_args": {
-            "youtube": {
-                "player_client": player_clients,
-            },
-        },
-        "skip_unavailable_fragments": True,
-        "prefer_insecure": False,
         "http_headers": {
             "User-Agent": "Mozilla/5.0",
             "Accept-Language": "en-US,en;q=0.9",
         },
     }
-    if cookie_file:
-        options["cookiefile"] = cookie_file
-    elif cookie_data:
-        cookie_path = directory / "youtube-cookies.txt"
-        cookie_path.write_text(cookie_data, encoding="utf-8")
-        options["cookiefile"] = str(cookie_path)
+    if is_youtube_url(segment.url):
+        options.update({
+            "js_runtimes": {"node": {}},
+            "remote_components": {"ejs:github", "ejs:npm"},
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["default"],
+                },
+            },
+        })
+        cookie_file = os.getenv("YOUTUBE_COOKIE_FILE")
+        cookie_data = os.getenv("YOUTUBE_COOKIES")
+        if cookie_file:
+            options["cookiefile"] = cookie_file
+        elif cookie_data:
+            cookie_path = directory / "youtube-cookies.txt"
+            cookie_path.write_text(cookie_data, encoding="utf-8")
+            options["cookiefile"] = str(cookie_path)
     try:
         with yt_dlp.YoutubeDL(options) as downloader:
             downloader.download([segment.url])

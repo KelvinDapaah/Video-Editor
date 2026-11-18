@@ -1,8 +1,14 @@
 import os
 import shutil
 import sys
+from urllib.parse import urlparse
 
 import yt_dlp
+
+
+def is_youtube_url(url):
+    hostname = (urlparse(url).hostname or "").lower()
+    return hostname == "youtu.be" or hostname.endswith(".youtube.com")
 
 def get_ffmpeg_path():
     """
@@ -34,7 +40,7 @@ def download_video(url, output_folder="downloads"):
         print(f"✅ FFmpeg detected at: {ffmpeg_path}")
         print("Downloading merged high-quality video with audio...")
         ydl_opts = {
-            'format': 'bv*+ba/b',
+            'format': 'bestvideo+bestaudio/best',
             'merge_output_format': 'mp4',
             'outtmpl': f'{output_folder}/%(title)s.%(ext)s',
             'ffmpeg_location': ffmpeg_path, # Tell yt-dlp exactly where the exe is
@@ -43,17 +49,13 @@ def download_video(url, output_folder="downloads"):
             'retries': 3,
             'fragment_retries': 3,
             'socket_timeout': 30,
-            'js_runtimes': {'node': {}},
-            'remote_components': {'ejs:github', 'ejs:npm'},
-            'extractor_args': {
-                'youtube': {
-                    'player_client': [
-                        'default', 'tv_samsung', 'tv', 'ios', 'android',
-                        'android_vr', 'visionos', 'mweb', 'web_embedded', 'web_safari',
-                    ],
-                },
-            },
         }
+        if is_youtube_url(url):
+            ydl_opts.update({
+                'js_runtimes': {'node': {}},
+                'remote_components': {'ejs:github', 'ejs:npm'},
+                'extractor_args': {'youtube': {'player_client': ['default']}},
+            })
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
