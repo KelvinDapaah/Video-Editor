@@ -47,7 +47,7 @@ def download_video(url, output_folder="downloads"):
             'remote_components': {'ejs:github', 'ejs:npm'},
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['web', 'web_embedded', 'ios', 'android', 'mweb'],
+                    'player_client': ['default', 'ios', 'android', 'mweb', 'web_embedded', 'tv'],
                 },
             },
         }

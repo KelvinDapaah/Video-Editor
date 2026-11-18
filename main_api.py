@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import tempfile
 import uuid
+import os
 
 import yt_dlp
 from fastapi import BackgroundTasks, FastAPI, HTTPException
@@ -63,6 +64,9 @@ def download_media(segment: Segment, directory: Path, index: int) -> Path:
     else:
         media_format = "bv*+ba/b"
 
+    player_clients = ["default", "ios", "android", "mweb", "web_embedded", "tv"]
+    cookie_file = os.getenv("YOUTUBE_COOKIE_FILE")
+    cookie_data = os.getenv("YOUTUBE_COOKIES")
     options = {
         "format": media_format,
         "outtmpl": template,
@@ -77,14 +81,22 @@ def download_media(segment: Segment, directory: Path, index: int) -> Path:
         "remote_components": {"ejs:github", "ejs:npm"},
         "extractor_args": {
             "youtube": {
-                "player_client": ["web", "web_embedded", "ios", "android", "mweb"],
+                "player_client": player_clients,
             },
         },
+        "skip_unavailable_fragments": True,
+        "prefer_insecure": False,
         "http_headers": {
             "User-Agent": "Mozilla/5.0",
             "Accept-Language": "en-US,en;q=0.9",
         },
     }
+    if cookie_file:
+        options["cookiefile"] = cookie_file
+    elif cookie_data:
+        cookie_path = directory / "youtube-cookies.txt"
+        cookie_path.write_text(cookie_data, encoding="utf-8")
+        options["cookiefile"] = str(cookie_path)
     try:
         with yt_dlp.YoutubeDL(options) as downloader:
             downloader.download([segment.url])
