@@ -1,7 +1,8 @@
-import sys
 import os
-import yt_dlp
 import shutil
+import sys
+
+import yt_dlp
 
 def get_ffmpeg_path():
     """
@@ -19,10 +20,10 @@ def get_ffmpeg_path():
 
     return None
 
-def download_pinterest_video(url, output_folder="downloads"):
+def download_video(url, output_folder="downloads"):
     """
-    Downloads a Pinterest video.
-    If FFmpeg is available (local or system), it merges high-quality video and audio.
+    Downloads a video from a supported URL.
+    If FFmpeg is available, it merges high-quality video and audio.
     """
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -33,11 +34,22 @@ def download_pinterest_video(url, output_folder="downloads"):
         print(f"✅ FFmpeg detected at: {ffmpeg_path}")
         print("Downloading merged high-quality video with audio...")
         ydl_opts = {
-            'format': 'bestvideo+bestaudio/best',
+            'format': 'bv*+ba/b',
             'merge_output_format': 'mp4',
             'outtmpl': f'{output_folder}/%(title)s.%(ext)s',
             'ffmpeg_location': ffmpeg_path, # Tell yt-dlp exactly where the exe is
             'quiet': False,
+            'noplaylist': True,
+            'retries': 3,
+            'fragment_retries': 3,
+            'socket_timeout': 30,
+            'js_runtimes': {'node': {}},
+            'remote_components': {'ejs:github', 'ejs:npm'},
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['web', 'web_embedded', 'ios', 'android', 'mweb'],
+                },
+            },
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -50,15 +62,19 @@ def download_pinterest_video(url, output_folder="downloads"):
         print("⚠️ FFmpeg NOT detected. Falling back to separate files...")
 
         video_opts = {
-            'format': 'bestvideo/best',
+            'format': 'bv*/b',
             'outtmpl': f'{output_folder}/%(title)s_VIDEO.%(ext)s',
             'allow_unplayable_formats': True,
+            'noplaylist': True,
+            'retries': 3,
         }
 
         audio_opts = {
             'format': 'bestaudio/best',
             'outtmpl': f'{output_folder}/%(title)s_AUDIO.%(ext)s',
             'allow_unplayable_formats': True,
+            'noplaylist': True,
+            'retries': 3,
         }
 
         try:
@@ -76,9 +92,14 @@ def download_pinterest_video(url, output_folder="downloads"):
             print(f"\n🚨 Critical failure: {e}")
             return False
 
+
+def download_pinterest_video(url, output_folder="downloads"):
+    """Backward-compatible name for the generic video downloader."""
+    return download_video(url, output_folder)
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python main.py <Pinterest_URL>")
+        print("Usage: python main.py <VIDEO_URL>")
         sys.exit(1)
 
     # Handle cases where we are running from a different directory
@@ -88,5 +109,5 @@ if __name__ == "__main__":
     os.chdir("..")
 
     video_url = sys.argv[1]
-    if not download_pinterest_video(video_url):
+    if not download_video(video_url):
         sys.exit(1)

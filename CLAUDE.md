@@ -1,6 +1,6 @@
-# Pinterest Video Downloader
+# Universal Video Downloader
 
-A high-quality video downloader for Pinterest.
+A high-quality video downloader for YouTube and other sites supported by yt-dlp.
 
 ## Project Guidelines
 - **Language:** Python 3.11+

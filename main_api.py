@@ -59,9 +59,9 @@ def download_media(segment: Segment, directory: Path, index: int) -> Path:
     if segment.media_type == "audio":
         media_format = "bestaudio/best"
     elif segment.media_type == "video":
-        media_format = "bestvideo/best"
+        media_format = "bv*[ext=mp4]/bv*/b"
     else:
-        media_format = "bestvideo+bestaudio/best"
+        media_format = "bv*+ba/b"
 
     options = {
         "format": media_format,
@@ -70,6 +70,20 @@ def download_media(segment: Segment, directory: Path, index: int) -> Path:
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
+        "retries": 3,
+        "fragment_retries": 3,
+        "socket_timeout": 30,
+        "js_runtimes": {"node": {}},
+        "remote_components": {"ejs:github", "ejs:npm"},
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["web", "web_embedded", "ios", "android", "mweb"],
+            },
+        },
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0",
+            "Accept-Language": "en-US,en;q=0.9",
+        },
     }
     try:
         with yt_dlp.YoutubeDL(options) as downloader:
