@@ -89,26 +89,41 @@ def download_media(segment: Segment, directory: Path, index: int) -> Path:
         options.update({
             "js_runtimes": {"node": {}},
             "remote_components": {"ejs:github", "ejs:npm"},
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["default"],
-                },
-            },
         })
         cookie_file = os.getenv("YOUTUBE_COOKIE_FILE")
         cookie_data = os.getenv("YOUTUBE_COOKIES")
-        if cookie_file:
+        if cookie_file and os.path.isfile(cookie_file):
             options["cookiefile"] = cookie_file
         elif cookie_data:
             cookie_path = directory / "youtube-cookies.txt"
             cookie_path.write_text(cookie_data, encoding="utf-8")
             options["cookiefile"] = str(cookie_path)
-    try:
-        with yt_dlp.YoutubeDL(options) as downloader:
-            downloader.download([segment.url])
-        return find_downloaded_file(directory, prefix)
-    except Exception as error:
-        raise RuntimeError(f"Unable to download segment {index + 1}: {error}") from error
+
+        client_sets = [
+            ["default", "tv", "ios", "android", "mweb"],
+            ["ios", "android", "mweb"],
+            ["web_embedded", "web_safari", "web"],
+        ]
+    else:
+        client_sets = [None]
+
+    last_error = None
+    for client_set in client_sets:
+        attempt_options = dict(options)
+        if client_set:
+            attempt_options["extractor_args"] = {
+                "youtube": {"player_client": client_set},
+            }
+        try:
+            with yt_dlp.YoutubeDL(attempt_options) as downloader:
+                downloader.download([segment.url])
+            return find_downloaded_file(directory, prefix)
+        except Exception as error:
+            last_error = error
+
+    raise RuntimeError(
+        f"Unable to download segment {index + 1}: {last_error or 'media extraction failed'}"
+    )
 
 
 def run_ffmpeg(arguments: list[str], output: Path):
@@ -290,6 +305,17 @@ def compose_media(request: ComposeRequest, work_dir: Path) -> Path:
 @app.get("/")
 async def root():
     return {"message": "Video editor API is running!"}
+
+
+@app.get("/health/youtube")
+async def youtube_health():
+    cookie_file = os.getenv("YOUTUBE_COOKIE_FILE")
+    has_cookie_file = bool(cookie_file and os.path.isfile(cookie_file))
+    has_cookie_data = bool(os.getenv("YOUTUBE_COOKIES"))
+    return {
+        "cookies_configured": has_cookie_file or has_cookie_data,
+        "cookie_source": "file" if has_cookie_file else "environment" if has_cookie_data else "none",
+    }
 
 
 @app.get("/download")
